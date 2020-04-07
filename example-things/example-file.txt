@@ -1,0 +1,64 @@
+class int {
+    # This is implemented automatically
+    |typeof (self) {
+        return int
+    }
+
+    # This too
+    static |typeof (self) {
+        return type(t=int)
+    }
+
+    # Is one number equal to another
+    |is (self, value: int) {
+        return self.binary_value == value.binary_value
+    }
+    
+    # Is the type `int` equal to value
+    static |is (self, value: int) {
+        return value.internal_address == self.internal_address
+    }
+
+    # Use the same logic for "==" as the "is" operator
+    # This is copied automatically
+    |equal = self|is
+
+    |greater_than (self, value: int) {
+        diff = self.binary_value - value.binary_value
+        # check if `diff` is positive...
+        return is_positive
+    }
+
+    # same as python, with `==` and `>` defined, all other equality
+    # operators are clearly defined as combinations of the former:
+    # `!=`, `<`, `>=`, `<=`
+}
+
+class Custom {
+    constructor {
+        autoAssignedField: int =
+        optionalField?: str =
+        withDefault: float = 3.14
+    }
+    notNeededInContructor: int = 1
+    constructor (self, ) {
+        # All these fields are required by 
+    }
+    |init (self, field1, field2, three) {
+        self
+    }
+}
+
+
+my_set = {1,2,3}
+my_multiset = m{1,1,2,3,2,3}
+
+
+deliver main (ctx: some_type) {}
+deliver alongside main (...) {}
+deliver filtered main (...) {} ??
+
+
+receive main (ctx) {
+    pass
+}

@@ -1,0 +1,143 @@
+Module(name="", body=[], children=[])
+
+# entries need to be defined as parallel, sequential, or unique (default)
+unique entry main (ctx) {
+  stdout('your face')
+}
+
+entry stdin (input) {
+  stdout(input) # or just use `return to stdout`
+}
+
+entry get '/api/info' (req, res, next) {
+  if (req.headers.key == 'secret') {
+    return data
+  } {
+    // do something	
+  }
+}
+
+entry get <'/'> (req, res) {}
+
+
+Difference between `return`, `to`, and `return to`
+- `return` returns a raw value
+- `to` passes a value to an entry (like `to stdout`) and continues execution
+- `return to` passes the value to the entry and halts execution
+
+
+Syntax for currying?
+
+tmp = function %(arg1, arg2) # space required (maybe?)
+tmp2 = tmp %(arg3) # further currying
+tmp2() # execution (could provide final arguments)
+
+
+`or` and `and`, vs `||` and `&&`
+
+`or` and `and` are for boolean expressions and are therefore typed as booleans
+`||` and `&&` are find the first thruthy value and the first falsy value, respectively
+
+In essence, they do the same thing programatically except for (1) how the compiler types them and
+(2) when they should be used (`||` and `&&` cannot be used as boolean expressions, or maybe not... Maybe it's just convention).
+
+
+Function calls, array splicing, and other syntaxes that are similar CANNOT have spaces (or at least
+not newlines) in between the name and the postfix thingy. For example, `function()` is fine
+but `function ()` raises a syntax error (or at least `function\n()` does). I'm still undecided on
+whether it's just newlines, or all whitespace.
+
+
+Errors are not something that you throw, but a type you return. They are denoted
+`IndexError!'user message'` or better yet, they can be denoted as a curried function
+`IndexError%('user message')`. I like that better
+
+
+
+Instead of using the `entry` keyword, use `receive` and `deliver` for the input and output of the entries.
+Also, should entry be renamed to gateway or something?
+
+
+"Types" (as this language uses them) should be used like so: `x: type_name = ...` and
+`var: type1-type2-type_with<generic>-also<generics>could_be<in, the, middle>maybe = ...`
+A more realistic example: `l: hash-list<int> = ...` has all the properties of a list of ints but
+can be hashed. That means that "types" can be a list of actual types (like list) and ops (like hash).
+Speaking of ops...
+
+Ops (operations) can be enacted on an object like `object |op`. Eg: `my_object |str |hash` would convert
+`my_object` to a string then hash it. Ops can be binary `((2 |add 2) |equal 4)` (evaluates to
+True--paranthesis optional). For custom ops to have more than two operands, use a tuple of types:
+`x |custom (y, z)`
+This means there is a duality between type annotations and their counterpart ops. You can define
+an object as a string `x: str` and then convert it to a string somewhere in your code with `x |str`
+
+|bor, |band, |bnand, |bnot (binary ops), |and, |or, |bool, |str, |hash, |int, |float, |add, |sub, |mul
+most cummunative binary ops (like addition and multiplication) have a counterpart
+"reverse" op like |radd and |rmul
+
+
+
+Datatypes:
+  -array: `[1, 2, 'stuff']`
+  -tuple: `(1, 'stuff')`
+  -namedtuple: `(a=1, b='stuff')`
+  -restricteddict: `{a=1, b='stuff'}`
+  -dict: `{"a": 1, "b": "stuff"}`
+
+
+Here are the differences between namedtuple, restricteddict (RD), and dict. The two main things are
+immutability and optimization. Namedtuples are Immutable and optimized, RDs are Mutable and optimized,
+regular dicts are Not optimized. What do I mean by optimized? Both namedtuples and RDs have a set number of fields,
+meaning that they can be represented as plain tuples but fields are accessed by name. The conversion to
+a tuple is done at compile time. Long story short, dicts are regular hashmaps and RDs are mutable
+namedtuples which are both englized tuples (`object.field`).
+
+Namedtuples are tuples that you can access fields by name.
+
+
+
+Restricteddicts (RD) are also the internal representation of classes. All objects have a certain number
+of fields and methods (`x.field, x.method(a, b)`) but they can also override certain ops (maybe
+something like `x + 1` or `x |hash` makes sense). Defining a class creates a function that just returns
+an RD that represents the object. Defining a static method or field adds them to the function itself.
+
+
+# I hate the `this` keyword, but I don't see the best way to do it otherwise
+# maybe stick to using the python way of doing things? `def method(self, arg1, arg2)`
+class Name {
+  field1 = 'default'
+  something: int
+  other: list<str>
+  static field = 'only on class object itself'
+
+  # exactly the same as `static |call () {}`
+  |new (x: int) {
+    this.something = x
+  }
+
+  regular_method() {}
+
+  |special_op() {}
+
+  # "copy" `other`'s iter operation to this object.
+  # this allows you to iterate through `obj.other` when iterating through just `obj`
+  |iter = this.other |iter
+
+  # copy all operations--not sure of either syntax
+  |* = this.other |*
+  *(this.other |*)
+}
+
+
+And guess what... A function is just an RD! It also has two ops |call and |curry
+
+
+include the keyof keyword? seems kinda arbitrary... Maybe use generics somehow (but generics use types as arguments, not values)
+x: keyof SOME_DICT_OR_NAMEDTUPLE = 1
+
+
+
+Next task: Figure out how modules are linked, i.e. which module should run first,
+          what is the root folder of the project, things of that nature.
+    Sidenote: are entries in a global namespace or not?
+

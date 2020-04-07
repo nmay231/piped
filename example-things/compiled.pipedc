@@ -1,0 +1,21 @@
+{
+    "project": "project_name, just to make sure it's in the same one",
+    "compiler_version": "",
+    "module": "not needed because the file names should match up",
+    "meta": {
+        "hash": "Probably sha-256",
+        "last_changed": "just useful info",
+    },
+    "compiled": {
+        "ast": "AST(/* nonesense */)",
+        "members": {
+            "main": {
+                "which": "entry, function, class, etc.",
+                "ast": "start:end",
+                "types": "some sort of optimized version of the types of the input and output",
+            },
+            "function_name": {...},
+            "class_name": {...},
+        },
+    },
+}
