@@ -1,6 +1,18 @@
 grammar Piped;
 
-module: (toplevel | '\n')* EOF;
+NUMBER: ([0-9]+ ('.' [0-9]*)? | '.' [0-9]+) ([eE]'-'? [0-9]+)?;
+STRING: ('\'' ('\\\'' | ~['\r\n])* '\'')
+	| ('"' ('\\"' | ~["\r\n])* '"');
+
+IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
+
+WS: [ \t]+ -> channel(HIDDEN);
+NEWLINE: '\r'? '\n';
+
+COMMENT: (('###' .*? '###') | ('#' ~[\r\n]*)) -> channel(HIDDEN);
+CONTINUED_LINE: '\\' '\r'? '\n' -> channel(HIDDEN);
+
+module: (toplevel | NEWLINE)* EOF;
 toplevel: (
 		importstatement
 		// | deliver_entry
@@ -9,15 +21,6 @@ toplevel: (
 		// | class_definition
 	);
 
-WS: [ \t]+ -> channel(HIDDEN);
-NEWLINE: '\n';
-
-NUMBER: [0-9]+;
-// Don't forget escaped quotes
-STRING: ('\'' ('\\\'' | ~['\n])* '\'')
-	| ('"' ('\\"' | ~["\n])* '"');
-
-IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
 importstatement:
 	('import' import_name ('as' IDENTIFIER)?)
 	| (
@@ -26,9 +29,6 @@ importstatement:
 		)*
 	);
 import_name: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
-
-COMMENT: (('###' .*? '###') | ('#' ~[\n]*)) -> channel(HIDDEN);
-CONTINUED_LINE: '\\\n' -> channel(HIDDEN);
 
 // deliver_entry: // Entries are able to be replaced or can be setup to be replaced ('repeatable' |
 // 'repeat')? // Can this entry be run in parallel or sequencially with other entries of the same
@@ -50,21 +50,21 @@ instruction: statement | for_loop | conditional_if | (NEWLINE);
 
 statement: (
 		assignment
-		| term
+		| expr
 		// | function call thingy | 'break' | 'continue'
-		| ('return' term)
-	) (('\r'? '\n') | ';');
+		| ('return' expr)
+	) (NEWLINE | ';');
 // Forcing all statements to end with a newline or semicolon is annoying. Mainly because of oneline
 // functions.
 
-for_loop: 'for' IDENTIFIER 'in' term '{' instruction* '}';
-conditional_if: ((('if' | 'elif') term) | 'else') '{' instruction* '}';
+for_loop: 'for' IDENTIFIER 'in' expr '{' instruction* '}';
+conditional_if: ((('if' | 'elif') expr) | 'else') '{' instruction* '}';
 
 // Typing is not technically correct, but whatever
-assignment: IDENTIFIER (':' term)? '=' (term | term);
-// assignment: assignable_term (',' assignable_term)* '=' term (',' term)*;
+assignment: IDENTIFIER (':' expr)? '=' (expr | expr);
+// assignment: assignable_term (',' assignable_term)* '=' expr (',' expr)*;
 
-term:
+expr:
 	NUMBER
 	| STRING
 	| IDENTIFIER
@@ -74,58 +74,44 @@ term:
 	| named_tuple
 	| list_
 	| set_
-	| ('(' term ')')
-	// | prefixed_encloser | multiset
-	| term '.' IDENTIFIER
-	| term '.?' IDENTIFIER
-	| term '(' (
-		(named_item | term) (',' (named_item | term))* ','?
+	| ('(' expr ')')
+	// | prefixed_encloser
+	| expr '.' IDENTIFIER
+	| expr '.?' IDENTIFIER
+	| expr '[' expr ']' // subscripting
+	| expr '(' (
+		(named_item | expr) (',' (named_item | expr))* ','?
 	)? ')'
 	| (
 		'(' (named_item (',' named_item)* ','?)? ')' '=>' '{' instruction* '}'
 	)
-	| term '**' term
-	| term ('*' | '/' | '%') term
-	| term ('+' | '-') term
-	| term ('==' | '!=' | '<=' | '>=') term
-	| term ('and' | 'or') term
-	// keyof might not need to be here since it is for types
-	| ('not' | '+' | '-' | 'typeof' | 'keyof') term;
+	| expr '**' expr
+	| expr ('*' | '/' | '%') expr
+	| expr ('+' | '-') expr
+	| expr ('==' | '!=' | '<=' | '>=') expr
+	| expr ('and' | 'or') expr
+	| ('not' | '+' | '-' | 'typeof') expr;
 
 dictionary: ('{' ':' '}') (
-		'{' term ':' term (',' term ':' term)* ','? '}'
+		'{' expr ':' expr (',' expr ':' expr)* ','? '}'
 	);
 
-tuple_: ('(' ',' ')') | ('(' term (',' term)* ','? ')');
+tuple_: ('(' ',' ')') | ('(' expr (',' expr)* ','? ')');
 
 named_item:
 	('*' IDENTIFIER)
 	| (IDENTIFIER '=')
-	| (IDENTIFIER '=' term);
+	| (IDENTIFIER '=' expr);
 
-// I'm having the empty dictionary "{}" be a record because We can always downgrade records to
-// dictionaries, but not vice versa
-record: ('{' '='? '}')
+record: ('{' '=' '}')
 	| ( '{' named_item ( ',' named_item)* ','? '}');
 
 named_tuple: ('(' '=' ')')
 	| ( '(' named_item ( ',' named_item)* ','? ')');
 
 // Sidenote: consider adding some sort of thing like list_/dictionary comprehensions
-list_: ('[' ']') | ('[' term (',' term)* ','? ']');
+list_: ('[' ']') | ('[' expr (',' expr)* ','? ']');
 
-set_: ('{' ',' '}') | ('{' term (',' term)+ ','? '}');
+set_: ('{' ',' '}') | ('{' expr (',' expr)+ ','? '}');
 
-// Allowing future language developments and others to modify it themselves prefixed_encloser:
-// LOWER_CHAR ( ('"' stuff '"') | ('\'' stuff '\'') | ('(' stuff ')') | ('{' stuff '}') );
-
-// access_field: term '.' IDENTIFIER; access_optional_field: term '.?' IDENTIFIER;
-
-// Do I need this for "and" and "or" of types (e.g.: `hash-list_<int>|hash-dict<int, str>`)
-/*
- lexer;
- 
- mode TYPE;
- 
- TYPE_GENERIC: IDENTIFIER '<' -> pushMode(TYPE); END_GENERIC: '>' -> popMode;
- */
+type: 'something_to_do_with_types' | 'keyof' expr;

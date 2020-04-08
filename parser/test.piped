@@ -1,6 +1,0 @@
-from name import something as testing
-
-def fibinacci () {
-    
-    function_name(a=1, 22, thrid='4'%2)
-}
