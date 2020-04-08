@@ -1,8 +1,4 @@
 def function_name () {
-    x = 1
-    for y in x {
-        y.something()
-    }
-    z = {}
-    # + {=} * {first=(2**4)} % (second='asdf') / (1,2,3)
+    x =1
+    #z = {first=(2**4)} % (second='asdf')# / (1,2,3)
 }

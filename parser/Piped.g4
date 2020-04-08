@@ -10,11 +10,12 @@ toplevel: (
 	);
 
 WS: [ \t]+ -> channel(HIDDEN);
-NEWLINE: '\r'? '\n';
+NEWLINE: '\n';
 
 NUMBER: [0-9]+;
 // Don't forget escaped quotes
-STRING: ('\'' ~['\n]* '\'') | ('"' ~["\n]* '"');
+STRING: ('\'' ('\\\'' | ~['\n])* '\'')
+	| ('"' ('\\"' | ~["\n])* '"');
 
 IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
 importstatement:
@@ -26,7 +27,8 @@ importstatement:
 	);
 import_name: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
 
-COMMENT: (('#' ~[\n]* '\n') | ('###' .*? '###')) -> channel(HIDDEN);
+COMMENT: (('###' .*? '###') | ('#' ~[\n]*)) -> channel(HIDDEN);
+CONTINUED_LINE: '\\\n' -> channel(HIDDEN);
 
 // deliver_entry: // Entries are able to be replaced or can be setup to be replaced ('repeatable' |
 // 'repeat')? // Can this entry be run in parallel or sequencially with other entries of the same
@@ -44,26 +46,22 @@ receive_entry:
 function_definition:
 	'def' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' instruction* '}';
 
-instruction:
-	statement
-	| for_loop
-	| conditional_if
-	| ('\r'? '\n');
+instruction: statement | for_loop | conditional_if | (NEWLINE);
 
 statement: (
 		assignment
-		| single_term
-		// | 'break' | 'continue'
-		| ('return' expression)
+		// | function call thingy | 'break' | 'continue'
+		| ('return' term)
 	) (('\r'? '\n') | ';');
-// Forcing all statements to end with a newline or semicolon is annoying. Mainly because of oneline functions
+// Forcing all statements to end with a newline or semicolon is annoying. Mainly because of oneline
+// functions.
 
-for_loop: 'for' IDENTIFIER 'in' expression '{' instruction* '}';
-conditional_if: ((('if' | 'elif') expression) | 'else') '{' instruction* '}';
+for_loop: 'for' IDENTIFIER 'in' term '{' instruction* '}';
+conditional_if: ((('if' | 'elif') term) | 'else') '{' instruction* '}';
 
 // Typing is not technically correct, but whatever
-assignment: IDENTIFIER (':' single_term)? '=' expression;
-// assignment: assignable_term (',' assignable_term)* '=' expression (',' expression)*;
+assignment: IDENTIFIER (':' single_term)? '=' term;
+// assignment: assignable_term (',' assignable_term)* '=' term (',' term)*;
 
 single_term:
 	NUMBER
@@ -79,31 +77,28 @@ single_term:
 	| single_term '.' IDENTIFIER
 	| single_term '.?' IDENTIFIER
 	| single_term '(' ')'
-	| ('(' expression ')')
+	| ('(' term ')')
 	| ('(' ')' '=>' '{' instruction* '}');
 expression:
-	(single_term '**' single_term)
-	| (single_term ('*' | '/' | '%') single_term)
-	| (single_term ('+' | '-') single_term)
-	| (single_term ('==' | '!=' | '<=' | '>=') single_term)
-	| (single_term ('and' | 'or') single_term)
+	<assoc = right>expression '**' expression
+	| expression ('*' | '/' | '%') expression
+	| expression ('+' | '-') expression
+	| expression ('==' | '!=' | '<=' | '>=') expression
+	| expression ('and' | 'or') expression
 	// keyof might not need to be here since it is for types
-	| (('not' | '+' | '-' | 'typeof' | 'keyof') single_term)
-	| single_term;
-// Should this be here?
+	| ('not' | '+' | '-' | 'typeof' | 'keyof') expression;
+term: single_term | expression;
 
 dictionary: ('{' ':' '}') (
-		'{' expression ':' expression (
-			',' expression ':' expression
-		)* ','? '}'
+		'{' term ':' term (',' term ':' term)* ','? '}'
 	);
 
-tuple_: ('(' expression (',' expression)* ','? ')');
+tuple_: ('(' term ',' ')') | ('(' term (',' term)+ ','? ')');
 
 named_item:
 	('*' IDENTIFIER)
 	| (IDENTIFIER '=')
-	| (IDENTIFIER '=' expression);
+	| (IDENTIFIER '=' term);
 
 // I'm having the empty dictionary "{}" be a record because We can always downgrade records to
 // dictionaries, but not vice versa
@@ -116,10 +111,9 @@ named_tuple: ('(' ',' ')')
 	| ( '(' named_item ( ',' named_item)* ','? ')');
 
 // Sidenote: consider adding some sort of thing like list_/dictionary comprehensions
-list_: ('[' ']') | ('[' expression (',' expression)* ','? ']');
+list_: ('[' ']') | ('[' term (',' term)* ','? ']');
 
-set_: ('{' ',' '}')
-	| ('{' expression (',' expression)+ ','? '}');
+set_: ('{' ',' '}') | ('{' term (',' term)+ ','? '}');
 
 // Allowing future language developments and others to modify it themselves prefixed_encloser:
 // LOWER_CHAR ( ('"' stuff '"') | ('\'' stuff '\'') | ('(' stuff ')') | ('{' stuff '}') );
