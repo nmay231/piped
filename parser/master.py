@@ -2,17 +2,30 @@ from grammar.PipedLexer import PipedLexer
 from grammar.PipedParser import PipedParser
 from grammar.PipedListener import PipedListener
 from antlr4 import InputStream, ParseTreeWalker
-from antlr4.BufferedTokenStream import BufferedTokenStream
+from antlr4 import InputStream, CommonTokenStream
+import os
+
 
 class PiedPiper(PipedListener):
-    def enterImportstatement(self, ctx:PipedParser.ModuleContext):
-        print(ctx.IMPORTNAME(), ctx.IDENTIFIER())
-        print(list(ctx.IDENTIFIER()[0]))
+    def enterImportstatement(self, ctx: PipedParser.ImportstatementContext):
+        print(tuple(child.getText() for child in ctx.getChildren()))
 
-stream = InputStream('import ./importname as yo')
+    def enterFunction_definition(self, ctx: PipedParser.Function_definitionContext):
+        print(tuple(child.getText() for child in ctx.getChildren()))
+
+
+if not os.path.exists("test.piped"):
+    print("Error: Expected to find `test.piped`")
+    exit(1)
+
+with open("test.piped") as f:
+    input_ = f.read()
+
+stream = InputStream(input_)
 lexer = PipedLexer(stream)
-tokens = BufferedTokenStream(lexer)
+tokens = CommonTokenStream(lexer)
+tokens.fill()
 parser = PipedParser(tokens)
-tree = parser.toplevel()
+tree = parser.module()
 walker = ParseTreeWalker()
 walker.walk(PiedPiper(), tree)
