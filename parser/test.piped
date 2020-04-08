@@ -1,4 +1,4 @@
 def function_name () {
-    x =1
-    #z = {first=(2**4)} % (second='asdf')# / (1,2,3)
+    
+    function_name(a=1, 22, thrid='4'%2)
 }

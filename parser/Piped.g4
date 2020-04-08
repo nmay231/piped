@@ -50,6 +50,7 @@ instruction: statement | for_loop | conditional_if | (NEWLINE);
 
 statement: (
 		assignment
+		| term
 		// | function call thingy | 'break' | 'continue'
 		| ('return' term)
 	) (('\r'? '\n') | ';');
@@ -60,10 +61,10 @@ for_loop: 'for' IDENTIFIER 'in' term '{' instruction* '}';
 conditional_if: ((('if' | 'elif') term) | 'else') '{' instruction* '}';
 
 // Typing is not technically correct, but whatever
-assignment: IDENTIFIER (':' single_term)? '=' term;
+assignment: IDENTIFIER (':' term)? '=' (term | term);
 // assignment: assignable_term (',' assignable_term)* '=' term (',' term)*;
 
-single_term:
+term:
 	NUMBER
 	| STRING
 	| IDENTIFIER
@@ -73,27 +74,29 @@ single_term:
 	| named_tuple
 	| list_
 	| set_
-	// | prefixed_encloser | multiset
-	| single_term '.' IDENTIFIER
-	| single_term '.?' IDENTIFIER
-	| single_term '(' ')'
 	| ('(' term ')')
-	| ('(' ')' '=>' '{' instruction* '}');
-expression:
-	<assoc = right>expression '**' expression
-	| expression ('*' | '/' | '%') expression
-	| expression ('+' | '-') expression
-	| expression ('==' | '!=' | '<=' | '>=') expression
-	| expression ('and' | 'or') expression
+	// | prefixed_encloser | multiset
+	| term '.' IDENTIFIER
+	| term '.?' IDENTIFIER
+	| term '(' (
+		(named_item | term) (',' (named_item | term))* ','?
+	)? ')'
+	| (
+		'(' (named_item (',' named_item)* ','?)? ')' '=>' '{' instruction* '}'
+	)
+	| term '**' term
+	| term ('*' | '/' | '%') term
+	| term ('+' | '-') term
+	| term ('==' | '!=' | '<=' | '>=') term
+	| term ('and' | 'or') term
 	// keyof might not need to be here since it is for types
-	| ('not' | '+' | '-' | 'typeof' | 'keyof') expression;
-term: single_term | expression;
+	| ('not' | '+' | '-' | 'typeof' | 'keyof') term;
 
 dictionary: ('{' ':' '}') (
 		'{' term ':' term (',' term ':' term)* ','? '}'
 	);
 
-tuple_: ('(' term ',' ')') | ('(' term (',' term)+ ','? ')');
+tuple_: ('(' ',' ')') | ('(' term (',' term)* ','? ')');
 
 named_item:
 	('*' IDENTIFIER)
@@ -105,9 +108,7 @@ named_item:
 record: ('{' '='? '}')
 	| ( '{' named_item ( ',' named_item)* ','? '}');
 
-// I'm having the empty tuple_ "(,)" be a named tuple_ because We can always downgrade named_tuples
-// to tuples, but not vice versa
-named_tuple: ('(' ',' ')')
+named_tuple: ('(' '=' ')')
 	| ( '(' named_item ( ',' named_item)* ','? ')');
 
 // Sidenote: consider adding some sort of thing like list_/dictionary comprehensions
@@ -118,7 +119,7 @@ set_: ('{' ',' '}') | ('{' term (',' term)+ ','? '}');
 // Allowing future language developments and others to modify it themselves prefixed_encloser:
 // LOWER_CHAR ( ('"' stuff '"') | ('\'' stuff '\'') | ('(' stuff ')') | ('{' stuff '}') );
 
-// access_field: single_term '.' IDENTIFIER; access_optional_field: single_term '.?' IDENTIFIER;
+// access_field: term '.' IDENTIFIER; access_optional_field: term '.?' IDENTIFIER;
 
 // Do I need this for "and" and "or" of types (e.g.: `hash-list_<int>|hash-dict<int, str>`)
 /*
