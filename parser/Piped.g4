@@ -41,56 +41,61 @@ import_name: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
 // '}' ;
 
 receive_entry:
-	'receive' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' instruction* '}';
+	'receive' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' block_body '}';
 
 function_definition:
-	'def' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' instruction* '}';
+	'def' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' block_body '}';
 
-instruction: statement | for_loop | conditional_if | (NEWLINE);
+// `statement?` allows ending statements to not require terminator
+block_body: instruction* statement?;
 
-statement: (
-		assignment
-		| expr
-		// | function call thingy | 'break' | 'continue'
-		| ('return' expr)
-	) (NEWLINE | ';');
-// Forcing all statements to end with a newline or semicolon is annoying. Mainly because of oneline
-// functions.
+instruction: (statement (NEWLINE | ';'))
+	| for_loop
+	| conditional_if
+	| (NEWLINE);
 
-for_loop: 'for' IDENTIFIER 'in' expr '{' instruction* '}';
-conditional_if: ((('if' | 'elif') expr) | 'else') '{' instruction* '}';
+statement:
+	assignment				# assignmentStatement
+	| expr					# expressionStatement
+	| 'break'				# breakStatement
+	| 'continue'			# continueStatement
+	| 'return' expr			# returnStatement
+	| function_definition	# defFunctionStatement;
+
+for_loop: 'for' IDENTIFIER 'in' expr '{' block_body '}';
+conditional_if: ((('if' | 'elif') expr) | 'else') '{' block_body '}';
 
 // Typing is not technically correct, but whatever
 assignment: IDENTIFIER (':' expr)? '=' (expr | expr);
 // assignment: assignable_term (',' assignable_term)* '=' expr (',' expr)*;
 
+// TODO: prefixed_encloser, e.g. `m{1,2,3}`
 expr:
-	NUMBER
-	| STRING
-	| IDENTIFIER
-	| dictionary
-	| record
-	| tuple_
-	| named_tuple
-	| list_
-	| set_
-	| ('(' expr ')')
-	// | prefixed_encloser
-	| expr '.' IDENTIFIER
-	| expr '.?' IDENTIFIER
-	| expr '[' expr ']' // subscripting
+	NUMBER					# ConstNumber
+	| STRING				# ConstString
+	| IDENTIFIER			# IdentifierExpr
+	| dictionary			# DictionaryExpr
+	| record				# RecordExpr
+	| tuple_				# TupleExpr
+	| named_tuple			# NamedTupleExpr
+	| list_					# ListExpr
+	| set_					# SetExpr
+	| ('(' expr ')')		# ParenExpr
+	| expr '.' IDENTIFIER	# AccessField
+	| expr '.?' IDENTIFIER	# OptionalAccessField
+	| expr '[' expr ']'		# Subscript
 	| expr '(' (
 		(named_item | expr) (',' (named_item | expr))* ','?
-	)? ')'
+	)? ')' # FunctionCall
 	| (
-		'(' (named_item (',' named_item)* ','?)? ')' '=>' '{' instruction* '}'
-	)
-	| expr '**' expr
-	| expr ('*' | '/' | '%') expr
-	| expr ('+' | '-') expr
-	| expr ('==' | '!=' | '<=' | '>=') expr
-	| expr ('and' | 'or') expr
-	| ('not' | '+' | '-' | 'typeof') expr;
+		'(' (named_item (',' named_item)* ','?)? ')' '=>' '{' block_body '}'
+	)										# ArrowFunction
+	| expr '**' expr						# Exponentiation
+	| expr ('*' | '/' | '%') expr			# MultiplyDivide
+	| expr ('+' | '-') expr					# AddSubtract
+	| expr ('==' | '!=' | '<=' | '>=') expr	# BooleanCompare
+	| expr ('and' | 'or') expr				# BooleanAndOr
+	| ('not' | '+' | '-' | 'typeof') expr	# Unary;
 
 dictionary: ('{' ':' '}') (
 		'{' expr ':' expr (',' expr ':' expr)* ','? '}'
@@ -114,4 +119,4 @@ list_: ('[' ']') | ('[' expr (',' expr)* ','? ']');
 
 set_: ('{' ',' '}') | ('{' expr (',' expr)+ ','? '}');
 
-type: 'something_to_do_with_types' | 'keyof' expr;
+type_: 'something_to_do_with_types' | 'keyof' expr;

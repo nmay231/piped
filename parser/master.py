@@ -13,6 +13,9 @@ class PiedPiper(PipedListener):
     def enterFunction_definition(self, ctx: PipedParser.Function_definitionContext):
         print(tuple(child.getText() for child in ctx.getChildren()))
 
+    def enterArrowFunction(self, ctx: PipedParser.ArrowFunctionContext):
+        print("arrow", tuple(child.getText() for child in ctx.getChildren()))
+
 
 if not os.path.exists("test.piped"):
     print("Error: Expected to find `test.piped`")
