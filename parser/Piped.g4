@@ -12,23 +12,23 @@ NEWLINE: '\r'? '\n';
 COMMENT: (('###' .*? '###') | ('#' ~[\r\n]*)) -> channel(HIDDEN);
 CONTINUED_LINE: '\\' '\r'? '\n' -> channel(HIDDEN);
 
-module: (toplevel | NEWLINE)* EOF;
-toplevel: (
-		importstatement
+module: (topLevel | NEWLINE)* EOF;
+topLevel: (
+		importStatement
 		// | deliver_entry
-		| receive_entry
-		| function_definition
+		| receiveEntry
+		| functionDefinition
 		// | class_definition
 	);
 
-importstatement:
-	('import' import_name ('as' IDENTIFIER)?)
+importStatement:
+	('import' importName ('as' IDENTIFIER)?)
 	| (
-		'from' import_name 'import' IDENTIFIER ('as' IDENTIFIER)? (
+		'from' importName 'import' IDENTIFIER ('as' IDENTIFIER)? (
 			',' IDENTIFIER ('as' IDENTIFIER)?
 		)*
 	);
-import_name: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
+importName: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
 
 // deliver_entry: // Entries are able to be replaced or can be setup to be replaced ('repeatable' |
 // 'repeat')? // Can this entry be run in parallel or sequencially with other entries of the same
@@ -40,18 +40,18 @@ import_name: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
 // BRACKETTAG? // Parameters '(' commalisttrailing? ')' // Of course, the content '{' instruction*
 // '}' ;
 
-receive_entry:
+receiveEntry:
 	'receive' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' block_body '}';
 
-function_definition:
+functionDefinition:
 	'def' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' block_body '}';
 
 // `statement?` allows ending statements to not require terminator
 block_body: instruction* statement?;
 
 instruction: (statement (NEWLINE | ';'))
-	| for_loop
-	| conditional_if
+	| forLoop
+	| conditional
 	| (NEWLINE);
 
 statement:
@@ -60,10 +60,10 @@ statement:
 	| 'break'				# breakStatement
 	| 'continue'			# continueStatement
 	| 'return' expr			# returnStatement
-	| function_definition	# defFunctionStatement;
+	| functionDefinition	# defFunctionStatement;
 
-for_loop: 'for' IDENTIFIER 'in' expr '{' block_body '}';
-conditional_if: ((('if' | 'elif') expr) | 'else') '{' block_body '}';
+forLoop: 'for' IDENTIFIER 'in' expr '{' block_body '}';
+conditional: ((('if' | 'elif') expr) | 'else') '{' block_body '}';
 
 // Typing is not technically correct, but whatever
 assignment: IDENTIFIER (':' expr)? '=' (expr | expr);
@@ -77,7 +77,7 @@ expr:
 	| dictionary			# DictionaryExpr
 	| record				# RecordExpr
 	| tuple_				# TupleExpr
-	| named_tuple			# NamedTupleExpr
+	| namedTuple			# NamedTupleExpr
 	| list_					# ListExpr
 	| set_					# SetExpr
 	| ('(' expr ')')		# ParenExpr
@@ -85,10 +85,10 @@ expr:
 	| expr '.?' IDENTIFIER	# OptionalAccessField
 	| expr '[' expr ']'		# Subscript
 	| expr '(' (
-		(named_item | expr) (',' (named_item | expr))* ','?
+		(namedItem | expr) (',' (namedItem | expr))* ','?
 	)? ')' # FunctionCall
 	| (
-		'(' (named_item (',' named_item)* ','?)? ')' '=>' '{' block_body '}'
+		'(' (namedItem (',' namedItem)* ','?)? ')' '=>' '{' block_body '}'
 	)										# ArrowFunction
 	| expr '**' expr						# Exponentiation
 	| expr ('*' | '/' | '%') expr			# MultiplyDivide
@@ -103,16 +103,16 @@ dictionary: ('{' ':' '}') (
 
 tuple_: ('(' ',' ')') | ('(' expr (',' expr)* ','? ')');
 
-named_item:
+namedItem:
 	('*' IDENTIFIER)
 	| (IDENTIFIER '=')
 	| (IDENTIFIER '=' expr);
 
 record: ('{' '=' '}')
-	| ( '{' named_item ( ',' named_item)* ','? '}');
+	| ( '{' namedItem ( ',' namedItem)* ','? '}');
 
-named_tuple: ('(' '=' ')')
-	| ( '(' named_item ( ',' named_item)* ','? ')');
+namedTuple: ('(' '=' ')')
+	| ( '(' namedItem ( ',' namedItem)* ','? ')');
 
 // Sidenote: consider adding some sort of thing like list_/dictionary comprehensions
 list_: ('[' ']') | ('[' expr (',' expr)* ','? ']');
