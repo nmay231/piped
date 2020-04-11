@@ -1,20 +1,9 @@
 from grammar.PipedLexer import PipedLexer
 from grammar.PipedParser import PipedParser
-from grammar.PipedListener import PipedListener
-from antlr4 import InputStream, ParseTreeWalker
+from main_processing import GetModuleDefinitions, TreeAnnotater
+from generate_c import generate
 from antlr4 import InputStream, CommonTokenStream
 import os
-
-
-class PiedPiper(PipedListener):
-    def enterImportstatement(self, ctx: PipedParser.ImportstatementContext):
-        print(tuple(child.getText() for child in ctx.getChildren()))
-
-    def enterFunction_definition(self, ctx: PipedParser.Function_definitionContext):
-        print(tuple(child.getText() for child in ctx.getChildren()))
-
-    def enterArrowFunction(self, ctx: PipedParser.ArrowFunctionContext):
-        print("arrow", tuple(child.getText() for child in ctx.getChildren()))
 
 
 if not os.path.exists("test.piped"):
@@ -30,5 +19,13 @@ tokens = CommonTokenStream(lexer)
 tokens.fill()
 parser = PipedParser(tokens)
 tree = parser.module()
-walker = ParseTreeWalker()
-walker.walk(PiedPiper(), tree)
+
+visitor = GetModuleDefinitions()
+visitor.visit(tree)
+
+# Should have an intermediary walk-through to type-check things
+
+getBuildInstructions = TreeAnnotater(visitor.meta)
+getBuildInstructions.visit(tree)
+
+print(generate(getBuildInstructions.meta))
