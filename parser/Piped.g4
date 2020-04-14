@@ -57,11 +57,12 @@ instruction: (statement (NEWLINE | ';'))
 
 statement:
 	assignment				# assignmentStatement
-	| expr					# expressionStatement
 	| 'break'				# breakStatement
 	| 'continue'			# continueStatement
 	| 'return' expr			# returnStatement
-	| functionDefinition	# defFunctionStatement;
+	| functionDefinition	# defFunctionStatement
+	// expr needs to be last to avoid ambiguity with keywords break, continue, etc.
+	| expr # expressionStatement;
 
 forLoop: 'for' IDENTIFIER 'in' expr '{' blockBody '}';
 conditional: ((('if' | 'elif') expr) | 'else') '{' blockBody '}';
