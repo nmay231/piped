@@ -1,6 +1,7 @@
 grammar Piped;
 
-NUMBER: ([0-9]+ ('.' [0-9]*)? | '.' [0-9]+) ([eE]'-'? [0-9]+)?;
+FLOAT: (INTEGER '.' [0-9]* | '.' [0-9]+) ([eE]'-'? [0-9]+)?;
+INTEGER: [0-9]+;
 STRING: ('\'' ('\\\'' | ~['\r\n])* '\'')
 	| ('"' ('\\"' | ~["\r\n])* '"');
 
@@ -15,10 +16,10 @@ CONTINUED_LINE: '\\' '\r'? '\n' -> channel(HIDDEN);
 module: (topLevel | NEWLINE)* EOF;
 topLevel: (
 		importStatement
-		// | deliver_entry
+		// | deliverEntry
 		| receiveEntry
 		| functionDefinition
-		// | class_definition
+		// | classDefinition
 	);
 
 importStatement:
@@ -30,7 +31,7 @@ importStatement:
 	);
 importName: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
 
-// deliver_entry: // Entries are able to be replaced or can be setup to be replaced ('repeatable' |
+// deliverEntry: // Entries are able to be replaced or can be setup to be replaced ('repeatable' |
 // 'repeat')? // Can this entry be run in parallel or sequencially with other entries of the same
 // name? Or is // it unique, like the `main` entry? If sequential, is it before or after the
 // original // sequential ( 'unique' | 'sequential' // This is only for entry data definitions (not
@@ -41,13 +42,13 @@ importName: ('./' | '/' | '../'+)? IDENTIFIER ('/' IDENTIFIER)*;
 // '}' ;
 
 receiveEntry:
-	'receive' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' block_body '}';
+	'receive' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' blockBody '}';
 
 functionDefinition:
-	'def' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' block_body '}';
+	'def' IDENTIFIER '(' (IDENTIFIER (',' IDENTIFIER)* ','?)? ')' '{' blockBody '}';
 
 // `statement?` allows ending statements to not require terminator
-block_body: instruction* statement?;
+blockBody: instruction* statement?;
 
 instruction: (statement (NEWLINE | ';'))
 	| forLoop
@@ -62,16 +63,16 @@ statement:
 	| 'return' expr			# returnStatement
 	| functionDefinition	# defFunctionStatement;
 
-forLoop: 'for' IDENTIFIER 'in' expr '{' block_body '}';
-conditional: ((('if' | 'elif') expr) | 'else') '{' block_body '}';
+forLoop: 'for' IDENTIFIER 'in' expr '{' blockBody '}';
+conditional: ((('if' | 'elif') expr) | 'else') '{' blockBody '}';
 
-// Typing is not technically correct, but whatever
-assignment: IDENTIFIER (':' expr)? '=' (expr | expr);
-// assignment: assignable_term (',' assignable_term)* '=' expr (',' expr)*;
+// Don't forget about tuple unpacking (can I ban the use of "()" or are they needed?)
+assignment: IDENTIFIER ':' type_ '=' expr;
 
-// TODO: prefixed_encloser, e.g. `m{1,2,3}`
+// TODO: prefixedEncloser, e.g. `m{1,2,3}`
 expr:
-	NUMBER					# ConstNumber
+	FLOAT					# ConstFloat
+	| INTEGER				# ConstInteger
 	| STRING				# ConstString
 	| IDENTIFIER			# IdentifierExpr
 	| dictionary			# DictionaryExpr
@@ -84,13 +85,14 @@ expr:
 	| expr '.' IDENTIFIER	# AccessField
 	| expr '.?' IDENTIFIER	# OptionalAccessField
 	| expr '[' expr ']'		# Subscript
+	| '~' type_ '~'			# TypeExpr
 	| expr '(' (
 		(namedItem | expr) (',' (namedItem | expr))* ','?
 	)? ')' # FunctionCall
 	| (
-		'(' (namedItem (',' namedItem)* ','?)? ')' '=>' '{' block_body '}'
+		'(' (namedItem (',' namedItem)* ','?)? ')' '=>' '{' blockBody '}'
 	)										# ArrowFunction
-	| expr '**' expr						# Exponentiation
+	| <assoc = right>expr '**' expr			# Exponentiation
 	| expr ('*' | '/' | '%') expr			# MultiplyDivide
 	| expr ('+' | '-') expr					# AddSubtract
 	| expr ('==' | '!=' | '<=' | '>=') expr	# BooleanCompare
@@ -119,4 +121,23 @@ list_: ('[' ']') | ('[' expr (',' expr)* ','? ']');
 
 set_: ('{' ',' '}') | ('{' expr (',' expr)+ ','? '}');
 
-type_: 'something_to_do_with_types' | 'keyof' expr;
+type_:
+	IDENTIFIER # SimpleType
+	| (
+		('{' '=' '}')
+		| (
+			'{' IDENTIFIER '=' type_ (',' IDENTIFIER '=' type_)* ','? '}'
+		)
+	) # RecordType
+	| (
+		('(' '=' ')')
+		| (
+			'(' IDENTIFIER '=' type_ (',' IDENTIFIER '=' type_)* ','? ')'
+		)
+	)																# NamedTupleType
+	| (('(' type_? ',' ')') | ( '(' type_ (',' type_)+ ','? ')'))	# TupleType
+	| IDENTIFIER '<' type_ (',' type_)* '>'							# GenericType
+	| '(' type_ ')'													# WrappedType
+	| 'keyof' type_													# KeyofType
+	| type_ '-' type_												# IntersectionType
+	| type_ '|' type_												# UnionType;
