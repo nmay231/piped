@@ -1,11 +1,9 @@
 from grammar.PipedLexer import PipedLexer
 from grammar.PipedParser import PipedParser
-from main_processing import VisitorAPI, ListenerAPI
+from main_processing import VisitorAPI, ListenerAPI, listeners
 from generate_c import generate
 from antlr4 import *
 import os
-
-from visitor_registors import first_pass
 
 
 if not os.path.exists("test.piped"):
@@ -28,7 +26,7 @@ tree = parser.module()
 # first_visitor.visitors = first_pass
 # first_visitor.visit(tree, "first_pass")
 listener = ListenerAPI()
-listener.listeners = first_pass
+listener.listeners = listeners
 take_a_walk = ParseTreeWalker()
 take_a_walk.walk(listener, tree)
 

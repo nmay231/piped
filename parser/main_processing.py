@@ -6,6 +6,24 @@ from typing import List, Dict, Any, Union
 from collections import defaultdict
 
 
+# Load all enter*() and exit*() functions in grammar_registry.* modules
+from grammar_registry import *
+import grammar_registry
+
+listeners = defaultdict(list)
+for mod_name in dir(grammar_registry):
+    if mod_name.startswith("_"):
+        continue
+    mod = getattr(grammar_registry, mod_name)
+    for item_name in dir(mod):
+        if not callable(getattr(mod, item_name)):
+            continue
+        if item_name.startswith("exit") or item_name.startswith("enter"):
+            listeners[item_name].append(getattr(mod, item_name))
+        else:
+            print(f"Warning: Ignoring function {mod_name}.{item_name}")
+
+
 @dataclass
 class HoldPlease:
     data_map: Dict[str, Any] = None
