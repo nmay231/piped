@@ -1,0 +1,26 @@
+private commands = {
+    add=add_func,
+    subtract=sub_func,
+}
+
+receive main(ctx) {
+    try {
+        command?: str = None
+        while command != 'quit' {
+            input_ = input(prompt='> ', termins=[' ', '\n'])
+            command = input_[:-1]
+
+            if command in commands.keys() {
+                numbers = input(termins=['\n'])
+                numbers = numbers.split() *-> int -> list
+
+                # Equivalent to `deliver str(commands[command](numbers)) + '\n' to stdout`
+                print(str(commands[command](numbers)))
+            }
+        }
+    } catch !UserCancel as err {
+        print()
+    }
+
+    print() # print newline
+}

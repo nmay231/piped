@@ -8,7 +8,7 @@ from collections import defaultdict
 
 @dataclass
 class HoldPlease:
-    pass
+    data_map: Dict[str, Any] = None
 
 
 Type = Union["SimpleType", "SuperType"]
@@ -58,6 +58,30 @@ default_global_scope = {
         st("int"),
     )
 }
+
+
+class ListenerAPI(PipedListener):
+    def __init__(self, meta_data=None):
+        super().__init__()
+        self.listeners = defaultdict(list)
+        if not meta_data:
+            self.meta_data = HoldPlease()
+        else:
+            self.meta_data = meta_data
+        for ruleMethod in dir(self):
+            if (ruleMethod.startswith("enter") or ruleMethod.startswith("exit")) and (
+                ruleMethod not in ("enterEveryRule", "exitEveryRule")
+            ):
+                setattr(self, ruleMethod, self.mockRule(ruleMethod))
+
+    def mockRule(self, name: str):
+        def func(ast):
+            if name not in self.listeners:
+                return
+            for listener in self.listeners[name]:
+                listener(ast, self.meta_data)
+
+        return func
 
 
 class VisitorAPI(PipedVisitor):
@@ -335,57 +359,57 @@ class VisitorAPI(PipedVisitor):
         return self.visitChildren(ctx)
 
 
-# @dataclass
-# class loadModule:
-#     name: str
-#     item: str = None
+@dataclass
+class loadModule:
+    name: str
+    item: str = None
 
 
-# @dataclass
-# class Instruction:
-#     which: str
-#     data: Any
+@dataclass
+class Instruction:
+    which: str
+    data: Any
 
 
-# @dataclass
-# class defineFunction:
-#     name: str
-#     arguments: Dict[str, str]
-#     body: List[Instruction] = None
+@dataclass
+class defineFunction:
+    name: str
+    arguments: Dict[str, str]
+    body: List[Instruction] = None
 
 
-# @dataclass
-# class receiveEntry:
-#     name: str
-#     arguments: Dict[str, str]
-#     body: List[Instruction] = None
+@dataclass
+class receiveEntry:
+    name: str
+    arguments: Dict[str, str]
+    body: List[Instruction] = None
 
 
-# @dataclass
-# class MetaData:
-#     public: Dict[str, Any]
-#     private: Dict[str, Any]
-#     scopes: List[Dict[str, Any]]
-#     whereAmI: Any = None
+@dataclass
+class MetaData:
+    public: Dict[str, Any]
+    private: Dict[str, Any]
+    scopes: List[Dict[str, Any]]
+    whereAmI: Any = None
 
 
-# @dataclass
-# class ExplicitType:
-#     which: str
-#     children: List[Union[str, "ExplicitType"]]
+@dataclass
+class ExplicitType:
+    which: str
+    children: List[Union[str, "ExplicitType"]]
 
 
-# @dataclass
-# class ValueHolder:
-#     v: Any
-#     type_: Any = None
+@dataclass
+class ValueHolder:
+    v: Any
+    type_: Any = None
 
 
-# @dataclass
-# class Variable:
-#     name: str
-#     type_: ExplicitType
-#     value: ValueHolder
+@dataclass
+class Variable:
+    name: str
+    type_: ExplicitType
+    value: ValueHolder
 
 
 # class GetModuleDefinitions(PipedVisitor):

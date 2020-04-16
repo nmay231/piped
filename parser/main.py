@@ -1,6 +1,6 @@
 from grammar.PipedLexer import PipedLexer
 from grammar.PipedParser import PipedParser
-from main_processing import VisitorAPI
+from main_processing import VisitorAPI, ListenerAPI
 from generate_c import generate
 from antlr4 import *
 import os
@@ -24,8 +24,12 @@ parser = PipedParser(tokens)
 tree = parser.module()
 
 # collect global variables
-first_visitor = VisitorAPI()
-first_visitor.visitors = first_pass
-first_visitor.visit(tree, "first_pass")
+# first_visitor = VisitorAPI()
+# first_visitor.visitors = first_pass
+# first_visitor.visit(tree, "first_pass")
+listener = ListenerAPI()
+listener.listeners = first_pass
+take_a_walk = ParseTreeWalker()
+take_a_walk.walk(listener, tree)
 
 # print(generate(first_visitor.meta_data))
