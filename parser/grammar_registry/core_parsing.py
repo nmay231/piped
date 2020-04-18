@@ -1,6 +1,5 @@
 import grammar.PipedParser as P
 import helper_classes as HC
-import module_scope as MS
 
 
 def enterModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
@@ -8,7 +7,7 @@ def enterModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
     # Private and public scopes respectively
     meta_data.scopes = [{}, {}]
     meta_data.generated = ""  # This DEFINITELY needs to change from a string
-    meta_data.TypeMaster = MS.TypeMaster()
+    meta_data.TypeMaster = HC.TypeMaster()
     meta_data.current_focus = HC.HoldPlease()
     meta_data.current_focus.now = "toplevel"
 
@@ -108,7 +107,7 @@ def exitAssignmentStatement(
 ):
     assignment = ast_ctx.assignment()
     current_function = meta_data.map[meta_data.current_focus.now]
-    current_function.body.append(MS.AssignmentStatement(meta_data.map[assignment]))
+    current_function.body.append(HC.AssignmentStatement(meta_data.map[assignment]))
 
 
 def exitSimpleType(ast_ctx: P.PipedParser.SimpleTypeContext, meta_data):

@@ -1,5 +1,8 @@
-grammar Changelog;
+/*
+ * This is just an idea for maintaining integrity between different library versions
+ */
 
+grammar Changelog;
 NEWLINE: '\r'? '\n';
 IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]*;
 IGNORE_NEWLINE: '\\' NEWLINE -> channel(HIDDEN);
