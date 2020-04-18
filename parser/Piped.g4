@@ -9,7 +9,7 @@ IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
 
 WS: [ \t]+ -> channel(HIDDEN);
 NEWLINE: '\r'? '\n';
-
+ANNOTATED_COMMENT: (('###' '@' .*? '###') | ('#' '@' ~[\r\n]*)) -> channel(HIDDEN);
 COMMENT: (('###' .*? '###') | ('#' ~[\r\n]*)) -> channel(HIDDEN);
 CONTINUED_LINE: '\\' '\r'? '\n' -> channel(HIDDEN);
 
