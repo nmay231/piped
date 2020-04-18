@@ -141,3 +141,14 @@ Next task: Figure out how modules are linked, i.e. which module should run first
           what is the root folder of the project, things of that nature.
     Sidenote: are entries in a global namespace or not?
 
+
+
+I need to define exactly how entry qualifiers work. Basically, they will end up acting as a sort of "event subscriber". Entries subscribe to certain names (like entry main or externalImport) and the qualifiers will determine *how* it will be subscribed or to which specific event they will subscribe to.
+
+
+Since writing the stuff above, I've renamed restricted dicts (RD) to records for consistency and brevity.
+
+
+Also, instead of attributes, I'm thinking of calling them subtypes. So odd and even are subtypes of int; boundedIter and unboundedIter are subtypes of iterator. Note, there can be more than two divisions of a type into subtypes, and a type can have multiple independent "subtype-categories" (int can also be subtyped into positive/negative/zero).
+
+Now, we can't actually "just trust" the developer to know how the interactions between subtypes work. E.g. an odd plus an odd equals an even, but there is no way to *convince* the compiler this is true. Instead, the compiler will sneakily check each time it's necessary if a value is really part of a subtype before enacting the subtype-specific method or action.
