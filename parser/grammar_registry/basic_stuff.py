@@ -1,33 +1,56 @@
 import grammar.PipedParser as P
 import helper_classes as HC
+import module_scope as MS
 
 
 def enterModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
     meta_data.map = {}
     # Private and public scopes respectively
     meta_data.scopes = [{}, {}]
+    meta_data.generated = ""  # This DEFINITELY needs to change from a string
+    meta_data.TypeMaster = MS.TypeMaster()
+    meta_data.current_focus = HC.HoldPlease()
+    meta_data.current_focus.now = "toplevel"
+
+
+def exitModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
+    # Misusing asserts, but ah well
+    assert (
+        len(meta_data.scopes) == 2
+    ), f"Module scopes were not cleaned up {meta_data.scopes}"
 
 
 def enterReceiveEntry(ast_ctx: P.PipedParser.ReceiveEntryContext, meta_data):
     name = str(ast_ctx.IDENTIFIER(0))
     arguments = [str(iden) for iden in tuple(ast_ctx.IDENTIFIER())[1:]]
-    # I'm not dealing with return right now. Get it on the next pass
-    meta_data.map[ast_ctx] = HC.ReceiveEntry(name, arguments, None)
+    # I'm not dealing with return types right now
+    return_ = None
+    body = []
+    meta_data.map[ast_ctx] = HC.ReceiveEntry(name, arguments, return_, body)
+    meta_data.scopes.append({})
+
+    new_focus = HC.HoldPlease()
+    new_focus.now = ast_ctx
+    new_focus.parent = meta_data.current_focus.now
+    meta_data.current_focus = new_focus
+
+
+def exitReceiveEntry(ast_ctx: P.PipedParser.ReceiveEntryContext, meta_data):
+    meta_data.generated += meta_data.map[meta_data.current_focus.now].generate()
+    meta_data.scopes.pop()
+    meta_data.current_focus = meta_data.current_focus.parent
 
 
 def exitConstInteger(ast_ctx: P.PipedParser.ConstIntegerContext, meta_data):
-    # Is using eval() a terrible idea? Maybe...
-    meta_data.map[ast_ctx] = eval(str(ast_ctx.INTEGER()))
+    meta_data.map[ast_ctx] = HC.Integer(str(ast_ctx.INTEGER()))
 
 
 def exitConstFloat(ast_ctx: P.PipedParser.ConstFloatContext, meta_data):
-    # Is using eval() a terrible idea? Maybe...
-    meta_data.map[ast_ctx] = eval(str(ast_ctx.FLOAT()))
+    meta_data.map[ast_ctx] = HC.Float(str(ast_ctx.FLOAT()))
 
 
 def exitConstString(ast_ctx: P.PipedParser.ConstStringContext, meta_data):
-    # Is using eval() a terrible idea? Maybe...
-    meta_data.map[ast_ctx] = eval(str(ast_ctx.STRING()))
+    meta_data.map[ast_ctx] = HC.String(str(ast_ctx.STRING()))
 
 
 def exitRecord(ast_ctx: P.PipedParser.RecordContext, meta_data):
@@ -35,7 +58,6 @@ def exitRecord(ast_ctx: P.PipedParser.RecordContext, meta_data):
     named_items = ((item.IDENTIFIER(), item.expr()) for item in ast_ctx.namedItem())
     dict_repr = {str(iden): meta_data.map[child] for iden, child in named_items}
     meta_data.map[ast_ctx] = HC.Record(dict_repr)
-    print(meta_data.map[ast_ctx])
 
 
 def exitRecordExpr(ast_ctx: P.PipedParser.RecordExprContext, meta_data):
@@ -78,4 +100,24 @@ def exitAssignment(ast_ctx: P.PipedParser.AssignmentContext, meta_data):
     type_ = meta_data.map.get(ast_ctx.type_(), None)
     expr = meta_data.map[ast_ctx.expr()]
     meta_data.map[ast_ctx] = HC.Variable(name, expr, type_)
-    print(meta_data.map[ast_ctx])
+    meta_data.scopes[-1][name] = meta_data.map[ast_ctx]
+
+
+def exitAssignmentStatement(
+    ast_ctx: P.PipedParser.AssignmentStatementContext, meta_data
+):
+    assignment = ast_ctx.assignment()
+    current_function = meta_data.map[meta_data.current_focus.now]
+    current_function.body.append(MS.AssignmentStatement(meta_data.map[assignment]))
+
+
+def exitSimpleType(ast_ctx: P.PipedParser.SimpleTypeContext, meta_data):
+    meta_data.map[ast_ctx] = meta_data.TypeMaster.getType(ast_ctx)
+
+
+def exitRecordType(ast_ctx: P.PipedParser.RecordTypeContext, meta_data):
+    meta_data.map[ast_ctx] = meta_data.TypeMaster.getType(ast_ctx)
+
+
+def exitNamedTupleType(ast_ctx: P.PipedParser.NamedTupleTypeContext, meta_data):
+    meta_data.map[ast_ctx] = meta_data.TypeMaster.getType(ast_ctx)

@@ -21,13 +21,19 @@ tokens.fill()
 parser = PipedParser(tokens)
 tree = parser.module()
 
-# collect global variables
-# first_visitor = VisitorAPI()
-# first_visitor.visitors = first_pass
-# first_visitor.visit(tree, "first_pass")
+# Walk the tree
 listener = ListenerAPI()
 listener.listeners = listeners
 take_a_walk = ParseTreeWalker()
 take_a_walk.walk(listener, tree)
 
-# print(generate(first_visitor.meta_data))
+# Write extra useful comments :)
+print(listener.meta_data.TypeMaster.generate())
+print(listener.meta_data.generated)
+print(
+    """
+int main () {
+    receive_entry_main();
+    return 0;
+}"""
+)

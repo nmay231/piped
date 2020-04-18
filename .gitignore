@@ -3,3 +3,4 @@ __pycache__/
 /parser/grammar/*
 .antlr/
 /parser/test*.piped
+/parser/output*
