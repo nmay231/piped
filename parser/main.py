@@ -31,6 +31,7 @@ print(listener.meta_data.TypeMaster.generate())
 print(listener.meta_data.generated)
 print(
     """
+#include<stdio.h>
 int main () {
     receive_entry_main();
     return 0;

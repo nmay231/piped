@@ -1,5 +1,7 @@
 import grammar.PipedParser as P
 import helper_classes as HC
+import itertools as IT
+import internal_objects as Internal
 
 
 def enterModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
@@ -10,6 +12,9 @@ def enterModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
     meta_data.TypeMaster = HC.TypeMaster()
     meta_data.current_focus = HC.HoldPlease()
     meta_data.current_focus.now = "toplevel"
+
+    # Temporary method of adding a print function to global scope
+    meta_data.scopes[0]["print"] = Internal.printFunc
 
 
 def exitModule(ast_ctx: P.PipedParser.ModuleContext, meta_data):
@@ -120,3 +125,46 @@ def exitRecordType(ast_ctx: P.PipedParser.RecordTypeContext, meta_data):
 
 def exitNamedTupleType(ast_ctx: P.PipedParser.NamedTupleTypeContext, meta_data):
     meta_data.map[ast_ctx] = meta_data.TypeMaster.getType(ast_ctx)
+
+
+def exitExpressionStatement(
+    ast_ctx: P.PipedParser.ExpressionStatementContext, meta_data
+):
+    if not isinstance(ast_ctx.expr(), P.PipedParser.FunctionCallContext):
+        print(
+            f"Warning: non-function-call expressions result in no-op (line: {ast_ctx.start.line})"
+        )
+        return
+    current_function = meta_data.map[meta_data.current_focus.now]
+    current_function.body.append(meta_data.map[ast_ctx.expr()])
+
+
+def exitFunctionCall(ast_ctx: P.PipedParser.FunctionCallContext, meta_data):
+    children = list(
+        filter(
+            lambda x: isinstance(
+                x, (P.PipedParser.ExprContext, P.PipedParser.NamedItemContext)
+            ),
+            ast_ctx.getChildren(),
+        )
+    )
+    caller, *children = children
+    caller = meta_data.map[caller]
+    args = [meta_data.map[arg] for arg in children]
+    meta_data.map[ast_ctx] = HC.FunctionCallStatement(caller, args)
+
+
+def exitAccessField(ast_ctx: P.PipedParser.AccessFieldContext, meta_data):
+    meta_data.map[ast_ctx] = HC.AccessField(
+        meta_data.map[ast_ctx.expr()], str(ast_ctx.IDENTIFIER())
+    )
+
+
+def exitIdentifierExpr(ast_ctx: P.PipedParser.IdentifierExprContext, meta_data):
+    id_ = str(ast_ctx.IDENTIFIER())
+    for scope in reversed(meta_data.scopes):
+        if id_ in scope:
+            meta_data.map[ast_ctx] = scope[id_]
+            break
+    else:
+        print(f"Error: {id_} not defined")

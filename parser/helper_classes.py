@@ -215,6 +215,15 @@ class AssignmentStatement(Statement):
         return f"{self.variable.type.type_def()} {self.variable.name} = {self.variable.value.generate()};"
 
 
+@dataclass
+class FunctionCallStatement(Statement):
+    caller: "Expr"
+    arguments: typing.List[typing.Any]
+
+    def generate(self):
+        return f'{self.caller.generate()}({", ".join(arg.generate() for arg in self.arguments)});'
+
+
 # simple class as a dynamic data store
 class HoldPlease:
     pass
@@ -298,3 +307,15 @@ class Variable:
     name: str
     value: typing.Any
     type: typing.Any
+
+    def generate(self):
+        return self.name
+
+
+@dataclass
+class AccessField:
+    expr: typing.Any
+    field: str
+
+    def generate(self):
+        return f"{self.expr.generate()}.{self.field}"
