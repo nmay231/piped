@@ -1,4 +1,6 @@
 from grammar.PipedParser import PipedParser
+from dataclasses import dataclass
+import typing
 
 
 class TypeMaster:
@@ -205,7 +207,7 @@ class Statement:
 
 
 class AssignmentStatement(Statement):
-    def __init__(self, var: Variable):
+    def __init__(self, var: "Variable"):
         super().__init__()
         self.variable = var
 

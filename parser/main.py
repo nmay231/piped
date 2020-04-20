@@ -1,7 +1,6 @@
 from grammar.PipedLexer import PipedLexer
 from grammar.PipedParser import PipedParser
 from main_processing import VisitorAPI, ListenerAPI, listeners
-from generate_c import generate
 from antlr4 import *
 import os
 
